@@ -96,7 +96,17 @@ fn animate(surface: &Rc<Surface>, view: &NshView, f: impl FnOnce(&mut Live)) {
     };
     if start {
         let view = view.clone();
-        surface.add_frame_callback(move |_, now| tick(&view, now * 1000.0));
+        // Whether only keyframes repeating forever are left (the agent of
+        // `nsh test` does not wait for them, or no step would end).
+        let mut looping = false;
+        surface.add_frame_callback(move |surface, now| {
+            let (more, loops) = tick(&view, now * 1000.0);
+            if (more && loops) != looping {
+                looping = !looping;
+                surface.cosmetic_frame(looping);
+            }
+            more
+        });
     }
 }
 
@@ -224,38 +234,40 @@ fn ancestor_dying(view: &NshView) -> bool {
 }
 
 /// One display frame (`now` in ms) of `view`'s animations: whether it
-/// wants the next one.
-fn tick(view: &NshView, now: f64) -> bool {
+/// wants the next one, and whether all it has left are keyframes repeating
+/// forever ([`Live::finishing`]).
+fn tick(view: &NshView, now: f64) -> (bool, bool) {
     // A view deleted inside a deleted subtree leaves with its ancestor
     // instead of fading on its own (deletions arrive in any order, so this
     // is decided once the batch is applied).
     let starting_out = view.state().live.as_ref().is_some_and(|l| l.leaving());
     let inherited = starting_out && ancestor_dying(view);
 
-    let step = {
+    let (step, loops) = {
         let mut s = view.state_mut();
         let s = &mut *s;
         let Some(mut live) = s.live.take() else {
-            return false;
+            return (false, false);
         };
         if inherited {
             live.leave_with_ancestor();
         }
         let step = live.step(now, &mut s.frame, &mut s.style);
+        let loops = !live.finishing();
         if !live.idle() {
             s.live = Some(live);
         }
-        step
+        (step, loops)
     };
 
     if step.removed {
         view.unparent();
-        return false;
+        return (false, false);
     }
     view.moved();
     if step.restyled {
         // Text and canvas drawings may use the style (tint).
         view.redraw();
     }
-    !step.finished
+    (!step.finished, loops)
 }

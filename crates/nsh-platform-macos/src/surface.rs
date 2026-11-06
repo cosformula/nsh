@@ -214,8 +214,8 @@ pub(crate) struct Surface {
     /// transitions): called on every frame while they return true.
     frame_callbacks: RefCell<Vec<FrameCallback>>,
     /// How many of the frame callbacks have only cosmetic work left (a
-    /// scroll indicator fading out): what [`Surface::animating`] does not
-    /// count.
+    /// scroll indicator fading out, keyframes repeating forever): what
+    /// [`Surface::animating`] does not count.
     #[cfg(feature = "dev")]
     cosmetic_frames: Cell<usize>,
     /// The model of a test session's app (`nsh test --target`).
@@ -690,8 +690,9 @@ impl Surface {
     }
 
     /// A frame callback's work left became cosmetic (`on`: a scroll
-    /// indicator fading out, which shows nothing the app did) or no longer
-    /// is; it ends with `on` false.
+    /// indicator fading out, which shows nothing the app did; keyframes
+    /// repeating forever, a spinner, which never end) or no longer is; it
+    /// ends with `on` false.
     pub(crate) fn cosmetic_frame(&self, on: bool) {
         #[cfg(feature = "dev")]
         {
@@ -704,9 +705,10 @@ impl Surface {
     }
 
     /// Whether a native animation runs: the graph's (not one looping
-    /// forever, which no test step waits for), or the platform's own
-    /// (scroll glides, zooms; not a scroll indicator's fade, after which
-    /// nothing changes); or batches wait for the next frame.
+    /// forever, which no test step waits for), the platform's own (scroll
+    /// glides, zooms; not a scroll indicator's fade, after which nothing
+    /// changes) or a view's transitions (not its keyframes repeating
+    /// forever); or batches wait for the next frame.
     #[cfg(feature = "dev")]
     pub(crate) fn animating(&self) -> bool {
         self.anim.borrow().finishing()

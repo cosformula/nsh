@@ -123,6 +123,21 @@ impl Live {
             && self.keyframes.is_none()
     }
 
+    /// True while something animates that ends by itself: a keyframe
+    /// animation repeating forever (a spinner, a ping) does not count, as
+    /// in [`crate::animation::Animator::finishing`]. What a test's step
+    /// waits for.
+    pub fn finishing(&self) -> bool {
+        self.frame.is_some()
+            || self.style.is_some()
+            || self.color.running()
+            || self.presence.is_some()
+            || self
+                .keyframes
+                .as_ref()
+                .is_some_and(|run| run.animation.iterations.is_some())
+    }
+
     /// True while a frame callback steps it.
     pub fn ticking(&self) -> bool {
         self.ticking
@@ -1242,6 +1257,36 @@ mod tests {
         assert!(close(live.opacity(), 0.5));
         let step = live.step(2000.0, &mut frame, &mut style);
         assert!(step.removed && step.finished && !live.ticking());
+    }
+
+    #[test]
+    fn a_keyframe_animation_repeating_forever_is_not_finishing() {
+        let looping = |iterations| {
+            let mut style = Box::new(ViewStyle {
+                animation: Some(KeyframeAnimation {
+                    keyframes: Keyframes::Ping,
+                    duration: 1000.0,
+                    delay: 0.0,
+                    easing: [0.0, 0.0, 1.0, 1.0],
+                    iterations,
+                }),
+                ..ViewStyle::default()
+            });
+            let mut live = Live::default();
+            live.restyle(restyle(&ViewStyle::default(), &mut style, false).unwrap());
+            live
+        };
+        let (mut frame, mut style) = (Bounds::default(), Box::default());
+        // A ping that ends after two runs is waited for, one forever is not.
+        assert!(looping(Some(2)).finishing());
+        let mut live = looping(None);
+        assert!(!live.finishing());
+        // Appearing while it pings: the appearance ends by itself.
+        live.appear(LayoutAnimation::LINEAR.create.unwrap());
+        assert!(live.finishing());
+        live.step(0.0, &mut frame, &mut style);
+        live.step(5000.0, &mut frame, &mut style);
+        assert!(!live.finishing() && !live.idle());
     }
 
     fn text(colors: &[Color]) -> AttributedText {
