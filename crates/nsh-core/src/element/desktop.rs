@@ -10,6 +10,28 @@
 //! menus ([`popup_menu`]) are [`MenuItem`]s whose [`MenuItem::on_select`]
 //! runs when the user chooses the item, by a click or its shortcut.
 //!
+//! The window's bounds, mode and display are [`window_state`], the
+//! displays [`displays`]: both reactive. An app that opens its window as
+//! the user left it saves [`WindowState::window_bounds`] when it changes
+//! and, as its root first renders, gives it back to
+//! [`set_window_bounds`], fitted on the displays there are now
+//! ([`WindowBounds::fit_on_displays`]).
+//!
+//! ```ignore
+//! // In the root component, as it first renders.
+//! if let Some(saved) = Storage::get_item("window")
+//!     .and_then(|json| serde_json::from_str::<WindowBounds>(&json).ok())
+//! {
+//!     set_window_bounds(saved.fit_on_displays(&displays()));
+//! }
+//! effect(|| {
+//!     if let Some(state) = window_state() {
+//!         let json = serde_json::to_string(&state.window_bounds).unwrap();
+//!         let _ = Storage::set_item("window", json);
+//!     }
+//! });
+//! ```
+//!
 //! On platforms without desktop windows these have no effect.
 //!
 //! [`Interactive::window_drag`]: super::Interactive::window_drag
@@ -19,8 +41,8 @@ use std::{fmt, rc::Rc};
 use super::{ImageSrc, Owner, cleanup, menus::MenuHandler, task::Answer};
 use crate::{
     desktop::{
-        self, DesktopCommand, MenuAction, MenuBarMode, MenuRole, Shortcut, TitleBarStyle,
-        WindowFrame, WindowLevel,
+        self, DesktopCommand, Display, MenuAction, MenuBarMode, MenuRole, Shortcut, TitleBarStyle,
+        WindowBounds, WindowFrame, WindowLevel, WindowState,
     },
     geometry::{Edges, Point, Points},
     keymap::When,
@@ -98,6 +120,35 @@ pub fn set_frame(frame: WindowFrame) {
         height: frame.height.filter(|v| v.is_finite() && v.0 > 0.0),
         animated: frame.animated,
     }));
+}
+
+/// The app's window (TS: `windowState()`): its bounds on the screen, its
+/// mode with the bounds it returns to ([`WindowState::window_bounds`],
+/// what to save), whether it is minimized and the display it is on.
+/// Reading subscribes: a move or a resize comes once the window stops for
+/// a moment, a change of mode, display or being minimized at once. `None`
+/// off desktops and where the surface has no window of its own yet.
+pub fn window_state() -> Option<WindowState> {
+    super::ambient::window_state()
+}
+
+/// The displays (TS: `displays()`): their bounds and the parts of them
+/// windows use, in screen coordinates. Reading subscribes: plugging in a
+/// display, unplugging one or arranging them again changes them. Empty
+/// off desktops.
+pub fn displays() -> Vec<Display> {
+    super::ambient::displays()
+}
+
+/// Puts the window in `bounds`' mode with its windowed bounds (TS:
+/// `Window.setBounds`): restored to the bounds, then maximized or in full
+/// screen when the mode says so; doing it again changes nothing. Bounds of
+/// [`window_state`] saved in an earlier launch may be off
+/// every display now: [`WindowBounds::fit_on_displays`] first. Where the
+/// platform cannot place windows (GTK 4) only the size and mode apply. A
+/// view embedded in another app's window leaves its window to that app.
+pub fn set_window_bounds(bounds: WindowBounds) {
+    super::desktop_command(DesktopCommand::SetBounds(bounds));
 }
 
 /// Sets the window's level on macOS and Windows (TS: `Window.setLevel`):

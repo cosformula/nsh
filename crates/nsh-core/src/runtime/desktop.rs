@@ -4,7 +4,9 @@
 
 use crate::{
     Command, ROOT_ID,
-    desktop::{DesktopCommand, MenuBarMode, TitleBarStyle, WindowFrame, WindowLevel},
+    desktop::{
+        DesktopCommand, Display, MenuBarMode, TitleBarStyle, WindowBounds, WindowFrame, WindowLevel,
+    },
     element::{JsObject, ModuleCx, module, task::Action},
     geometry::Points,
 };
@@ -101,6 +103,29 @@ impl Window {
             animated: frame.animated,
         };
         desktop(cx, DesktopCommand::SetFrame(frame));
+    }
+
+    /// Puts the window in `bounds.mode` with its windowed bounds
+    /// `bounds.bounds` (points, screen coordinates, as `windowState()`
+    /// reports them): restored to the bounds, then maximized or in full
+    /// screen when the mode says so; doing it again changes nothing. Bounds
+    /// saved in an earlier launch go through `Window.fitOnDisplays` first.
+    /// Linux
+    /// (GTK 4) applies the size and mode alone: the window manager places
+    /// windows. A view embedded in another app's window leaves its window
+    /// to that app.
+    pub(crate) fn set_bounds(bounds: WindowBounds, cx: &mut ModuleCx) {
+        desktop(cx, DesktopCommand::SetBounds(bounds));
+    }
+
+    /// `bounds` on `displays` (`displays()`): unchanged when at least 100 ×
+    /// 20 points of the window's top 40 points are on a display's visible
+    /// bounds, where the user can take it by its title bar; otherwise
+    /// centered on the primary display's visible bounds, no larger than
+    /// them. The mode stays. For bounds saved in an earlier launch, whose
+    /// display may be unplugged since.
+    pub(crate) fn fit_on_displays(bounds: WindowBounds, displays: Vec<Display>) -> WindowBounds {
+        bounds.fit_on_displays(&displays)
     }
 
     /// Sets the window's level on macOS and Windows: `"normal"` restores the
