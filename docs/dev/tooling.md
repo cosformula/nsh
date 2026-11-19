@@ -127,7 +127,8 @@ to that file. `C-h e` opens its log/error panel; closing it gives every row back
 - Without `--port`, `nsh run` and `nsh dev` take the port their app (its entry) had last, else the first free one from
   8790; `nsh dev --server-only` takes 8790, which embedding apps keep in their code. `nsh run` and `nsh dev` bind to
   loopback, with `--target ios`, `android` or `web` and `nsh dev --server-only` to every address, for other machines
-  (`dev::Listen`, `run::Target::uses_network`).
+  (`dev::Listen`, `run::Target::uses_network`). For `nsh dev`, `--host <IPv4>` overrides the default bind address.
+  The printed URLs use the bound address. A wildcard bind prints loopback for local clients and lists the LAN addresses.
 - `nsh run` and `nsh dev` replace the previous NSH development command on the chosen port. The CLI
   holds an OS file lock in the existing NSH cache's `dev-sessions/` directory for the entire command,
   including Rust rebuilds and host / Android forwarding cleanup. A local stop file asks the owner to

@@ -114,7 +114,7 @@ nsh run my-app/App.tsx --target web
 ## nsh dev
 
 ```sh
-nsh dev [ENTRY] [--target catalyst|ios|android|macos|linux|windows|gpui|tui|web] [--device <DEVICE>] [--server-only] [--port <PORT>] [--release] [--limits [<LIMITS>]]
+nsh dev [ENTRY] [--target catalyst|ios|android|macos|linux|windows|gpui|tui|web] [--device <DEVICE>] [--server-only] [--host <IPv4>] [--port <PORT>] [--release] [--limits [<LIMITS>]]
 ```
 
 启动开发服务器并打开当前系统的原生宿主：macOS 使用 AppKit，Linux 使用 GTK，Windows 使用 Win32。开发 iOS 或 Android 应用时显式指定 `--target ios` 或 `--target android`。用 `--server-only` 为自己启动的宿主提供服务。服务器构建应用、监视入口所在目录，并把每次重新构建推送给连接到它的宿主。使用 `--server-only` 时，它会打印本机宿主使用的 URL、每个局域网地址对应的设备 URL，以及在 Web 运行时存在时，浏览器运行应用要打开的页面（[Web](./web.md#在浏览器里开发)）：
@@ -127,7 +127,7 @@ nsh dev [ENTRY] [--target catalyst|ios|android|macos|linux|windows|gpui|tui|web]
   browsers on this network: http://192.168.1.20:8790/
 ```
 
-用 `nsh dev --server-only` 连接嵌入了开发版 SDK（`NativeShellDev.xcframework`、`nsh-dev.aar`）的应用。`--target`、`--device`、`--port`、`--release` 和 `--limits` 的含义与 `nsh run` 相同。
+用 `nsh dev --server-only` 连接嵌入了开发版 SDK（`NativeShellDev.xcframework`、`nsh-dev.aar`）的应用。`--target`、`--device`、`--port`、`--release` 和 `--limits` 的含义与 `nsh run` 相同。加上 `--host 127.0.0.1` 可让服务器只接受本机连接。
 
 ## nsh test
 

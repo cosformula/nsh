@@ -115,7 +115,7 @@ On Unix, the terminal host exits on SIGHUP, SIGTERM, SIGINT or terminal disconne
 ## nsh dev
 
 ```sh
-nsh dev [ENTRY] [--target catalyst|ios|android|macos|linux|windows|gpui|tui|web] [--device <DEVICE>] [--server-only] [--port <PORT>] [--release] [--limits [<LIMITS>]]
+nsh dev [ENTRY] [--target catalyst|ios|android|macos|linux|windows|gpui|tui|web] [--device <DEVICE>] [--server-only] [--host <IPv4>] [--port <PORT>] [--release] [--limits [<LIMITS>]]
 ```
 
 Starts the dev server and opens this system’s native host: AppKit on macOS, GTK on Linux, Win32 on Windows. Choose `--target ios` or `--target android` explicitly for mobile development. `--server-only` serves hosts you start yourself. The server builds the app, watches the entry’s directory, and pushes every rebuild to connected hosts. With `--server-only`, it prints the URL for hosts on this machine and one per LAN address for devices, and, when the web runtime is there, the page browsers open to run the app ([Web](./web.md#develop-in-the-browser)):
@@ -128,7 +128,7 @@ Starts the dev server and opens this system’s native host: AppKit on macOS, GT
   browsers on this network: http://192.168.1.20:8790/
 ```
 
-Use `nsh dev --server-only` with an app that embeds the development SDK (`NativeShellDev.xcframework`, `nsh-dev.aar`). `--target`, `--device`, `--port`, `--release` and `--limits` work as for `nsh run`; `--server-only` selects a server without a launched host.
+Use `nsh dev --server-only` with an app that embeds the development SDK (`NativeShellDev.xcframework`, `nsh-dev.aar`). `--target`, `--device`, `--port`, `--release` and `--limits` work as for `nsh run`; `--server-only` selects a server without a launched host. Add `--host 127.0.0.1` to limit that server to this machine.
 
 ## nsh test
 

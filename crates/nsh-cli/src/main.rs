@@ -37,6 +37,7 @@ mod web;
 mod windows;
 
 use std::{
+    net::Ipv4Addr,
     path::PathBuf,
     process::ExitCode,
     sync::{Arc, OnceLock, RwLock},
@@ -236,6 +237,10 @@ enum Command {
         /// from 8790; with --server-only, 8790.
         #[arg(long)]
         port: Option<u16>,
+        /// IPv4 address to bind. Defaults to all interfaces for --server-only
+        /// and network targets, or loopback for local targets.
+        #[arg(long, value_name = "IPv4")]
+        host: Option<Ipv4Addr>,
         /// Minify and strip debug info.
         #[arg(long)]
         release: bool,
@@ -944,6 +949,7 @@ fn dispatch(command: Command) -> anyhow::Result<()> {
         Command::Dev {
             entry,
             port,
+            host,
             release,
             limits,
             target,
@@ -954,10 +960,13 @@ fn dispatch(command: Command) -> anyhow::Result<()> {
             // `--server-only` serves hosts started elsewhere, on other
             // machines too; a host `nsh dev` starts is on the network only
             // as `nsh run` starts it.
-            let listen = dev::Listen {
-                port: port.unwrap_or_default(),
-                network: server_only || target.uses_network(),
-            };
+            let mut listen = dev::Listen::new(
+                port.unwrap_or_default(),
+                server_only || target.uses_network(),
+            );
+            if let Some(host) = host {
+                listen.host = host;
+            }
             if server_only {
                 let session = dev::DevSession::start(&entry, listen, release, limits)?;
                 session.print_urls();
@@ -1045,10 +1054,7 @@ fn dispatch(command: Command) -> anyhow::Result<()> {
             no_limits_for_rust(&entry, limits)?;
             run::run(
                 &entry,
-                dev::Listen {
-                    port: port.unwrap_or_default(),
-                    network: target.uses_network(),
-                },
+                dev::Listen::new(port.unwrap_or_default(), target.uses_network()),
                 release,
                 run::HostFlags {
                     limits,
@@ -1158,6 +1164,8 @@ fn dispatch(command: Command) -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod command_tests {
+    use std::net::Ipv4Addr;
+
     use clap::Parser as _;
 
     use super::{Cli, Command, run::Target};
@@ -1353,6 +1361,19 @@ mod command_tests {
                 assert_eq!(target, expected);
             }
         }
+    }
+
+    #[test]
+    fn dev_accepts_an_explicit_bind_address() {
+        let cli =
+            Cli::try_parse_from(["nsh", "dev", "--server-only", "--host", "127.0.0.1"]).unwrap();
+        assert!(matches!(
+            cli.command,
+            Command::Dev {
+                host: Some(Ipv4Addr::LOCALHOST),
+                ..
+            }
+        ));
     }
 
     #[test]
